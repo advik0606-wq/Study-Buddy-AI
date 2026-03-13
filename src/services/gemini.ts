@@ -19,21 +19,43 @@ export interface StudyMaterial {
   flashcards: Flashcard[];
 }
 
-export async function generateStudyMaterial(content: string): Promise<StudyMaterial> {
+export interface FileData {
+  data: string;
+  mimeType: string;
+}
+
+export async function generateStudyMaterial(content: string, file?: FileData): Promise<StudyMaterial> {
   const model = "gemini-3.1-pro-preview";
+  
+  const parts: any[] = [
+    {
+      text: `Analyze the following study material and generate a comprehensive quiz (at least 5 questions) and a set of flashcards (at least 5 cards). 
+      
+      Instructions:
+      1. If the input is an image, perform OCR first.
+      2. If the input is a document, extract all key concepts.
+      3. Generate a quiz with 4 multiple choice options per question.
+      4. Generate flashcards with clear front/back content.
+      
+      Additional context/text provided:
+      ${content}
+      
+      Return the response in JSON format.`
+    }
+  ];
+
+  if (file) {
+    parts.push({
+      inlineData: {
+        data: file.data,
+        mimeType: file.mimeType
+      }
+    });
+  }
   
   const response = await ai.models.generateContent({
     model,
-    contents: [{
-      parts: [{
-        text: `Analyze the following study material and generate a comprehensive quiz (at least 5 questions) and a set of flashcards (at least 5 cards). 
-        
-        Material:
-        ${content}
-        
-        Return the response in JSON format.`
-      }]
-    }],
+    contents: [{ parts }],
     config: {
       responseMimeType: "application/json",
       responseSchema: {

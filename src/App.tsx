@@ -10,13 +10,14 @@ import {
   ChevronRight, 
   ChevronLeft, 
   RotateCcw,
-  Mail,
-  Home,
   Upload,
   Loader2,
-  Sparkles
+  Sparkles,
+  File as FileIcon,
+  X,
+  Image as ImageIcon
 } from 'lucide-react';
-import { generateStudyMaterial, type StudyMaterial, type QuizQuestion, type Flashcard } from './services/gemini';
+import { generateStudyMaterial, type StudyMaterial, type QuizQuestion, type Flashcard, type FileData } from './services/gemini';
 import { cn } from './lib/utils';
 
 // --- Components ---
@@ -272,6 +273,7 @@ const ContactPage = () => (
 export default function App() {
   const [activeTab, setActiveTab] = useState('home');
   const [inputText, setInputText] = useState('');
+  const [selectedFile, setSelectedFile] = useState<{ file: File, data: string, mimeType: string } | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
   const [studyMaterial, setStudyMaterial] = useState<StudyMaterial | null>(null);
   const [viewMode, setViewMode] = useState<'quiz' | 'flashcards'>('quiz');
@@ -283,18 +285,27 @@ export default function App() {
 
     const reader = new FileReader();
     reader.onload = (event) => {
-      const content = event.target?.result as string;
-      setInputText(content);
+      const base64Data = (event.target?.result as string).split(',')[1];
+      setSelectedFile({
+        file,
+        data: base64Data,
+        mimeType: file.type
+      });
     };
-    reader.readAsText(file);
+    reader.readAsDataURL(file);
   };
 
   const handleGenerate = async () => {
-    if (!inputText.trim()) return;
+    if (!inputText.trim() && !selectedFile) return;
     
     setIsGenerating(true);
     try {
-      const material = await generateStudyMaterial(inputText);
+      const fileData: FileData | undefined = selectedFile ? {
+        data: selectedFile.data,
+        mimeType: selectedFile.mimeType
+      } : undefined;
+
+      const material = await generateStudyMaterial(inputText, fileData);
       setStudyMaterial(material);
     } catch (error) {
       alert(error instanceof Error ? error.message : 'An error occurred');
@@ -329,39 +340,76 @@ export default function App() {
                   </div>
 
                   <div className="bg-white rounded-3xl p-8 shadow-xl border border-zinc-100 space-y-6">
-                    <div className="relative">
-                      <textarea
-                        value={inputText}
-                        onChange={(e) => setInputText(e.target.value)}
-                        placeholder="Paste your notes here or upload a file..."
-                        className="w-full h-64 p-6 rounded-2xl border-2 border-zinc-100 focus:border-indigo-500 focus:outline-none transition-all resize-none text-lg"
-                      />
-                      <div className="absolute bottom-4 right-4 flex gap-2">
+                    <div className="space-y-4">
+                      <div className="relative">
+                        <textarea
+                          value={inputText}
+                          onChange={(e) => setInputText(e.target.value)}
+                          placeholder="Add topics, instructions, or paste text here..."
+                          className="w-full h-32 p-6 rounded-2xl border-2 border-zinc-100 focus:border-indigo-500 focus:outline-none transition-all resize-none text-lg"
+                        />
+                      </div>
+
+                      <div 
+                        onClick={() => fileInputRef.current?.click()}
+                        className={cn(
+                          "border-2 border-dashed rounded-2xl p-8 transition-all cursor-pointer flex flex-col items-center justify-center gap-3",
+                          selectedFile ? "border-indigo-500 bg-indigo-50/30" : "border-zinc-200 hover:border-indigo-300 hover:bg-zinc-50"
+                        )}
+                      >
                         <input 
                           type="file" 
                           ref={fileInputRef}
                           onChange={handleFileUpload}
                           className="hidden" 
-                          accept=".txt,.md,.doc,.docx"
+                          accept="*/*"
                         />
-                        <button 
-                          onClick={() => fileInputRef.current?.click()}
-                          className="p-2 bg-zinc-100 hover:bg-zinc-200 rounded-lg transition-colors text-zinc-600"
-                          title="Upload document"
-                        >
-                          <Upload className="w-5 h-5" />
-                        </button>
+                        
+                        {selectedFile ? (
+                          <div className="flex items-center gap-4 w-full">
+                            <div className="bg-indigo-600 p-3 rounded-xl">
+                              {selectedFile.file.type.startsWith('image/') ? (
+                                <ImageIcon className="w-6 h-6 text-white" />
+                              ) : (
+                                <FileIcon className="w-6 h-6 text-white" />
+                              )}
+                            </div>
+                            <div className="flex-1 text-left">
+                              <p className="font-bold text-zinc-900 truncate max-w-[200px]">{selectedFile.file.name}</p>
+                              <p className="text-xs text-zinc-500">{(selectedFile.file.size / 1024 / 1024).toFixed(2)} MB</p>
+                            </div>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setSelectedFile(null);
+                              }}
+                              className="p-2 hover:bg-rose-100 rounded-full text-rose-500 transition-colors"
+                            >
+                              <X className="w-5 h-5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <div className="bg-zinc-100 p-4 rounded-full">
+                              <Upload className="w-8 h-8 text-zinc-400" />
+                            </div>
+                            <div>
+                              <p className="font-bold text-zinc-900">Click to upload file</p>
+                              <p className="text-sm text-zinc-500">PDF, Images, Word, or any study material</p>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
 
                     <button
                       onClick={handleGenerate}
-                      disabled={isGenerating || !inputText.trim()}
+                      disabled={isGenerating || (!inputText.trim() && !selectedFile)}
                       className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-all flex items-center justify-center gap-3 disabled:opacity-50 shadow-lg shadow-indigo-200"
                     >
                       {isGenerating ? (
                         <>
-                          <Loader2 className="w-6 h-6 animate-spin" /> Generating...
+                          <Loader2 className="w-6 h-6 animate-spin" /> Analyzing & Generating...
                         </>
                       ) : (
                         <>
