@@ -362,7 +362,7 @@ export default function App() {
                           ref={fileInputRef}
                           onChange={handleFileUpload}
                           className="hidden" 
-                          accept="*/*"
+                          accept=".pdf,.doc,.docx,.txt,.md,.jpg,.jpeg,.png"
                         />
                         
                         {selectedFile ? (
@@ -395,7 +395,7 @@ export default function App() {
                             </div>
                             <div>
                               <p className="font-bold text-zinc-900">Click to upload file</p>
-                              <p className="text-sm text-zinc-500">PDF, Images, Word, or any study material</p>
+                              <p className="text-sm text-zinc-500">PDF, Images (JPEG/PNG), Word, or any study material</p>
                             </div>
                           </>
                         )}
