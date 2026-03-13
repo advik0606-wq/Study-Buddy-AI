@@ -214,7 +214,7 @@ const ContactPage = () => (
     </div>
     
     <div className="bg-white rounded-3xl p-8 shadow-xl border border-zinc-100">
-      <form action="https://formspree.io/f/mnjgvryd" method="POST" className="space-y-6">
+      <form action={`https://formspree.io/f/${import.meta.env.VITE_FORMSPREE_ID || 'mnjgvryd'}`} method="POST" className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <div className="space-y-2">
             <label className="text-sm font-semibold text-zinc-700">Full Name</label>
